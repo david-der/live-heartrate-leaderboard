@@ -2,7 +2,6 @@
 from moose_lib import IngestPipeline, IngestPipelineConfig
 from moose_lib import StreamingFunction
 from moose_lib import ConsumptionApi
-from app.apis.get_group_hr_by_second import get_hr_api, QueryParams, QueryResult
 from app.functions.raw_to_processed import RawAntHRPacket__ProcessedAntHRPacket
 from app.functions.processed_to_unified import processedAntHRPacket__UNIFIED_HR_PACKET
 from app.datamodels.UnifiedHRPacket import UnifiedHRPacket
@@ -39,4 +38,5 @@ processedAntHRPipeline.get_stream().add_transform(
     transformation=processedAntHRPacket__UNIFIED_HR_PACKET
 )
 
-getHR_api = ConsumptionApi[QueryParams, QueryResult](name="getHR", query_function=get_hr_api)
+import app.apis.get_leaderboard as get_leaderboard_apis
+import app.apis.get_user_live_heart_rate_stats as get_user_live_heart_rate_stats_apis

@@ -11,7 +11,7 @@ def load_mock_device_ids() -> list[int]:
     Loads device IDs from mock-user-db.json, excluding devices with live_bt_device=True
     Returns a list of integer device IDs
     """
-    json_path = Path(__file__).parents[4] / 'mock-user-db.json'
+    json_path = Path(__file__).parents[3] / 'mock-user-db.json'
     with open(json_path) as f:
         user_db = json.load(f)
     

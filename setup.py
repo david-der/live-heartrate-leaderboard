@@ -10,5 +10,6 @@ setup(
         "requests==2.32.3",
         "moose-cli==0.4.100",
         "moose-lib==0.4.100",
+        "streamlit>=1.32.0",
     ],
 )

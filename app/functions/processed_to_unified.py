@@ -8,7 +8,7 @@ import json
 
 # Load the mock user db and return a dictionary of devices
 def load_device_dict():
-    json_path = Path(__file__).parents[3] / 'mock-user-db.json'
+    json_path = Path(__file__).parents[2] / 'mock-user-db.json'
     logger = Logger(action="SF")
     logger.info(f'Starting streaming function and loading mock user db from {json_path}')
 

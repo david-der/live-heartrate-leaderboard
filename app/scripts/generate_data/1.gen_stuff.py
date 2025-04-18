@@ -52,16 +52,24 @@ def gen_stuff():
         } for device_id in device_ids
     }
 
-    while 1 / 0.25 * 500 > time.time() - start_time:
+    # Main loop - runs indefinitely
+    while True: # Changed from time-based condition
         for device_id in device_ids:
-            time_elapsed = time.time() - start_time
+            # time_elapsed is still useful for the interval calculation
+            time_elapsed = time.time() - start_time 
             
+            # Determine the last recorded heart rate for smoothing
+            last_hr = device_data[device_id]['hr_history'][-1] if device_data[device_id]['hr_history'] else None
+            
+            # Update target HR less frequently (e.g., every few packets or based on HR event)
+            # For simplicity, let's update it when a beat event occurs or at the start
             if device_data[device_id]['hr_event'] or device_data[device_id]['packet_number'] == 0:
                 device_data[device_id]['target_hr'] = generate_realistic_heart_rate(
                     time_elapsed,
                     base_hr=device_data[device_id]['rhr'],
                     max_hr=device_data[device_id]['hr_max'], 
-                    phase=device_data[device_id]['phase']
+                    last_hr=last_hr, # Pass last HR for smoothing
+                    phase=device_data[device_id]['phase'] # Phase can still be used for variation between devices
                 )
                 device_data[device_id]['hr_event'] = False
             
@@ -140,25 +148,41 @@ def generate_ant_hrm_packet(device_id: int, device_data: dict):
     return ant_packet
 
 
-def generate_realistic_heart_rate(time_elapsed, base_hr=75, max_hr=180, session_duration=500, last_hr=None, phase=0.5):
-    # Calculate the phase of the workout (0 to 1)
-    phase = time_elapsed / session_duration
+# Updated function to remove session duration dependency
+def generate_realistic_heart_rate(time_elapsed, base_hr=60, max_hr=180, last_hr=None, phase=0.5):
+    # HIIT workout parameters (remain the same)
+    interval_duration = 60  # 60 seconds per interval
+    high_intensity_duration = 30  # 30 seconds high intensity
     
-    # Simplified heart rate curve calculation
-    hr_curve = 0.5 * (1 + math.tanh(10 * (phase - 0.5)))
+    # Calculate current interval time (phase adjusted)
+    # Use phase to offset the start time of the interval cycle for each device
+    phased_time_elapsed = time_elapsed + (interval_duration * phase)
+    current_interval = phased_time_elapsed % interval_duration
     
-    # Calculate target heart rate
-    target_hr = base_hr + (max_hr - base_hr) * hr_curve 
+    # Define target heart rates
+    high_hr = max_hr * 0.85  # 85% of max HR for high intensity
+    low_hr = max_hr * 0.65   # 65% of max HR for recovery
     
-    # Add random variation
-    variation = random.uniform(-3, 5)
+    # Determine target heart rate based *only* on HIIT interval section
+    # Removed warm-up/cool-down logic
+    if current_interval < high_intensity_duration:
+        # Ramp up during high intensity phase (simplified)
+        target_hr = low_hr + (high_hr - low_hr) * (current_interval / high_intensity_duration)
+    else:
+        # Ramp down during recovery phase (simplified)
+        target_hr = high_hr + (low_hr - high_hr) * ((current_interval - high_intensity_duration) / (interval_duration - high_intensity_duration))
+    
+    # Add minimal random variation
+    variation = random.uniform(-1, 1)
     new_hr = target_hr + variation
     
-    # Apply smoothing if there's a previous heart rate
+    # Apply strong smoothing using last heart rate
     if last_hr is not None:
-        new_hr = 0.7 * last_hr + 0.3 * new_hr
+        # Adjust smoothing factor if needed, 0.85 retains more history
+        new_hr = 0.85 * last_hr + 0.15 * new_hr 
+    else:
+        # If no history, start closer to base HR
+        new_hr = base_hr + (new_hr - base_hr) * 0.1 
     
-    # Ensure the heart rate stays within realistic bounds
-    final_hr = int(max(base_hr, min(round(new_hr), max_hr)))
-    
-    return final_hr
+    # Ensure heart rate stays within bounds
+    return int(max(base_hr * 0.9, min(round(new_hr), max_hr))) # Allow slightly below base_hr
